@@ -12,3 +12,6 @@ node_modules
 
 # Desktop Services Store on macOS
 .DS_Store
+
+_README.md
+src/config.js

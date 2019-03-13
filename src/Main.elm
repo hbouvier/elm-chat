@@ -5,19 +5,33 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 
+import Views exposing (..)
 import Models exposing (..)
-import EventHelpers exposing (..)
+import Json.Encode as Encode
+
+import Browser.Dom exposing (getViewportOf, setViewportOf)
+import Task
 
 -- https://codepen.io/ramilulu/pen/mrNoXw
 
 ---- UPDATE ----
 
 
+viewportId =
+    "messages-content-div"
+
+
+jumpToBottom : String -> Cmd Msg
+jumpToBottom id =
+  getViewportOf id
+    |> Task.andThen (\info -> setViewportOf id 0 info.scene.height)
+    |> Task.attempt (\_ -> NoOp)
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     SendButtonClicked ->
-      ( model, Cmd.none )
+      addNewMessage model
     TextInput text ->
       ( { model | message = text }, Cmd.none )
     KeyDown key ->
@@ -29,81 +43,31 @@ update msg model =
       let
           newModel = { model | messages = List.filter (\x -> x.text /= "") model.messages }
       in
-          addNewBotMessage { newModel | message = message}
-        
+          addNewBotMessage Text { newModel | message = message}
+    ScrollToBottom ->
+      (model, jumpToBottom viewportId)
+    GotText result ->
+      case result of
+        Ok fullText ->
+           addNewBotMessage Text { model | message = fullText}
+        Err _ ->
+          ( model, Cmd.none )
+    GotGif result ->
+      case result of
+        Ok url ->
+           addNewBotMessage Card { model | message = url }
+        Err _ ->
+          ( model, Cmd.none)
     NoOp ->
       ( model, Cmd.none )
 
-
-
----- VIEW ----
-
-
-
-messageItemView : Int -> Message -> Html Msg
-messageItemView index message =
-  if message.bot then
-    let
-      c = if message.text == "" then "message loading new" else "message"
-    in
-      div [ class c]
-          [ figure [class "avatar"]
-                   [ img [ src "https://www.gravatar.com/avatar/d63acca1aeea094dd10565935d93960b" ] []
-                   ]
-          , span [] [ text message.text ]
-          ]
-  else
-    div [ class "message message-personal new" ] [ text message.text ]
-
-
-view : Model -> Html Msg
-view model =
-  div [] 
-      [ section [ class "avenue-messenger" ]
-                [ div [ class "menu" ]
-                      [ div [ class "items"]
-                            [ span [] 
-                                   [ a [ href "#", title "Minimize" ] [ text "&mdash;" ]
-                                   , br [] []
-                                   , a [ href "#", title "End Chat" ] [ text "&#10005;" ]
-                                   ]
-                            ]
-                      , div [ class "button"] [ text "..." ]
-                      ]
-                , div [ class "agent-face" ]
-                      [ div [ class "half" ]
-                            [ img [ class "agent circle", src "https://www.gravatar.com/avatar/d63acca1aeea094dd10565935d93960b", alt "Henri Bouvier"] []
-                            ]
-                      ]
-                , div [ class "chat" ]
-                      [ div [ class "chat-title" ]
-                            [ h1 [] [ text "Henri Bouvier" ]
-                            , h2 [] [ text "Chief Dude Officer" ]
-                            ]
-                      , div [ class "messages" ]
-                            [ div [ class "messages-content" ]
-                                  ( List.indexedMap messageItemView model.messages )
-                            ]
-                      , div [ class "message-box" ]
-                            [ input [
-                                class "message-input",
-                                placeholder "Type message...",
-                                onKeyDown KeyDown,
-                                onInput TextInput,
-                                value model.message                                
-                              ] []
-                            , button [ class "message-submit", onClick SendButtonClicked ] [ text "Send" ]
-                            ]
-                      ]
-                ]
-      ]
 
 
 
 ---- PROGRAM ----
 
 
-main : Program () Model Msg
+main : Program () Model Msg -- Maybe Model
 main =
     Browser.element
         { view = view

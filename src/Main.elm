@@ -18,12 +18,12 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     SendButtonClicked ->
-      addNewMessage model
+      parseMessage model
     TextInput text ->
       ( { model | message = text }, Cmd.none )
     KeyDown key ->
       if key == 13 then
-        addNewMessage model
+        parseMessage model
       else
         ( model, Cmd.none )
     SendMessage message ->
@@ -47,9 +47,6 @@ update msg model =
           ( model, Cmd.none)
     NoOp ->
       ( model, Cmd.none )
-
-
-
 
 ---- PROGRAM ----
 

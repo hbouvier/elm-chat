@@ -5,17 +5,19 @@ import Process
 import Task
 import Http
 import Json.Decode exposing (Decoder, field, string)
+import ListHelpers exposing (..)
+import Regex
+import String exposing (join)
 
 type Msg
     = NoOp
-    | KeyDown Int
-    | SendButtonClicked
-    | TextInput String
-    | SendMessage String
-    | ScrollToBottom
-    | GotText (Result Http.Error String)
-    | GotGif (Result Http.Error String)
-
+    | KeyDown Int                          -- SendText widget ENTER handler
+    | SendButtonClicked                    -- SendText button click handler
+    | TextInput String                     -- SendText text handler
+    | ScrollToBottom                       -- ScrollDiv scroll to bottom
+    | GotText (Result Http.Error String)   -- HTTP response with TEXT
+    | GotGif (Result Http.Error String)    -- HTTP Response with gif URL
+    | SendMessage String                   -- CHAT time to add a bubble
 
 ---- MODEL ----
 
@@ -67,19 +69,6 @@ init =
 
 -- ADD Message
 
-removeFromList : Int -> List a -> List a
-removeFromList i xs =
-  (List.take i xs) ++ (List.drop (i+1) xs) 
-
-
-getItemFromList: Int -> List a -> Maybe a
-getItemFromList index xs =
-   if  (List.length xs) >= index then
-        List.take index xs
-        |> List.reverse
-        |> List.head
-   else 
-      Nothing
 
 
 initialBotMessage : Model -> ( Model, Cmd Msg )
@@ -103,10 +92,35 @@ initialBotMessage model =
                                 url = "https://elm-lang.org/assets/public-opinion.txt"
                               , expect = Http.expectString GotText
                               },
-                              getRandomCatGif,
+                              getRandomCatGif "cat",
                               delay(100) <| SendMessage "",
                               delay(1500) <| SendMessage msg,
                               delay(1550) <| ScrollToBottom,
+                              Cmd.none 
+                           ] )
+
+parseMessage : Model -> ( Model, Cmd Msg)
+parseMessage model =
+  let
+    regex = 
+      Maybe.withDefault Regex.never <|
+        Regex.fromString " "
+    tokens = Regex.split regex model.message
+  in
+    case List.head tokens of
+      Just "/gif" ->
+        slashGif (join "+" (removeFromList 0 tokens)) model
+      Just _ ->
+        addNewMessage model
+      Nothing ->
+        addNewMessage model
+
+
+slashGif: String -> Model -> ( Model, Cmd Msg)
+slashGif search model =
+     ( model, Cmd.batch [ 
+                              getRandomCatGif search,
+                              delay(1000) <| ScrollToBottom,
                               Cmd.none 
                            ] )
 
@@ -151,10 +165,10 @@ addNewBotMessage widgetType model  =
 
 
 
-getRandomCatGif : Cmd Msg
-getRandomCatGif =
+getRandomCatGif : String -> Cmd Msg
+getRandomCatGif search =
   Http.get
-    { url = "https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=cat"
+    { url = "https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=" ++ search
     , expect = Http.expectJson GotGif gifDecoder
     }
 

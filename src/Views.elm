@@ -7,7 +7,9 @@ import Html.Events exposing (..)
 import EventHelpers exposing (..)
 import Models exposing (..)
 
-import String exposing (slice, length)
+import Components.Card as Card
+import Components.TextBubble as TextBubble
+import Components.SendText as SendText
 
 ---- VIEW ----
 
@@ -21,7 +23,7 @@ messageItemView index message =
           [ figure [class "avatar"]
                    [ img [ src "https://www.gravatar.com/avatar/d63acca1aeea094dd10565935d93960b" ] []
                    ]
-          , span [] [ viewWidget message ]
+        , span [] [ viewWidget message ]
           ]
   else
     div [ class "message message-personal new" ] [ viewWidget message ]
@@ -38,58 +40,55 @@ viewWidget message =
       text "Loading..."
 
     Card ->
-      div []
-        [ img [ src message.text, width 120, height 120 ] []
-        ]
+      Card.view message.text
 
     Text ->
-      let
-        truncated = if length message.text > 120 then "..."  else ""
-        s = (slice 0 120 message.text) ++ truncated
-      in
-        text s
+      TextBubble.view message.text
 
 
+
+sendTextConfig : SendText.Config Msg
+sendTextConfig =
+    { sendMsg = SendButtonClicked
+    , keyDown = KeyDown
+    , textInput = TextInput
+    }
 
 view : Model -> Html Msg
 view model =
-  div [] 
-      [ section [ class "avenue-messenger" ]
-                [ div [ class "menu" ]
-                      [ div [ class "items"]
-                            [ span [] 
-                                   [ a [ href "#", title "Minimize" ] [ text "&mdash;" ]
-                                   , br [] []
-                                   , a [ href "#", title "End Chat" ] [ text "&#10005;" ]
-                                   ]
-                            ]
-                      , div [ class "button"] [ text "..." ]
-                      ]
-                , div [ class "agent-face" ]
-                      [ div [ class "half" ]
-                            [ img [ class "agent circle", src "https://www.gravatar.com/avatar/d63acca1aeea094dd10565935d93960b", alt "Henri Bouvier"] []
-                            ]
-                      ]
-                , div [ class "chat" ]
-                      [ div [ class "chat-title" ]
-                            [ h1 [] [ text "Henri Bouvier" ]
-                            , h2 [] [ text "Elm Grasshopper" ]
-                            ]
-                      , div [ class "messages" ]
-                            [ div [ class "messages-content", id "messages-content-div" ]
-                                  ( List.indexedMap messageItemView model.messages )
-                            ]
-                      , div [ class "message-box" ]
-                            [ input [
-                                class "message-input",
-                                placeholder "Type message...",
-                                onKeyDown KeyDown,
-                                onInput TextInput,
-                                value model.message                                
-                              ] []
-                            , button [ class "message-submit", onClick SendButtonClicked ] [ text "Send" ]
-                            ]
-                      ]
-                ]
-      ]
+  let
+      sendTextState =
+          { text = model.message
+          }
+  in
+    div [] 
+        [ section [ class "avenue-messenger" ]
+                  [ div [ class "menu" ]
+                        [ div [ class "items"]
+                              [ span [] 
+                                    [ a [ href "#", title "Minimize" ] [ text "&mdash;" ]
+                                    , br [] []
+                                    , a [ href "#", title "End Chat" ] [ text "&#10005;" ]
+                                    ]
+                              ]
+                        , div [ class "button"] [ text "..." ]
+                        ]
+                  , div [ class "agent-face" ]
+                        [ div [ class "half" ]
+                              [ img [ class "agent circle", src "https://www.gravatar.com/avatar/d63acca1aeea094dd10565935d93960b", alt "Henri Bouvier"] []
+                              ]
+                        ]
+                  , div [ class "chat" ]
+                        [ div [ class "chat-title" ]
+                              [ h1 [] [ text "Henri Bouvier" ]
+                              , h2 [] [ text "Elm Grasshopper" ]
+                              ]
+                        , div [ class "messages" ]
+                              [ div [ class "messages-content", id "messages-content-div" ]
+                                    ( List.indexedMap messageItemView model.messages )
+                              ]
+                        , SendText.view sendTextConfig sendTextState
+                        ]
+                  ]
+        ]
 

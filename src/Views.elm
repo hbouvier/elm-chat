@@ -7,45 +7,10 @@ import Html.Events exposing (..)
 import EventHelpers exposing (..)
 import Models exposing (..)
 
-import Components.Card as Card
-import Components.TextBubble as TextBubble
 import Components.SendText as SendText
+import Widgets.Bubble as Bubble
 
 ---- VIEW ----
-
-messageItemView : Int -> Message -> Html Msg
-messageItemView index message =
-  if message.bot then
-    let
-      c = if message.text == "" then "message loading new" else "message"
-    in
-      div [ class c ]
-          [ figure [class "avatar"]
-                   [ img [ src "https://www.gravatar.com/avatar/d63acca1aeea094dd10565935d93960b" ] []
-                   ]
-        , span [] [ viewWidget message ]
-          ]
-  else
-    div [ class "message message-personal new" ] [ viewWidget message ]
-
-viewWidget : Message -> Html Msg
-viewWidget message =
-  case message.widgetType of
-    Failure ->
-      div []
-        [ text "I could not load a random cat for some reason. "
-        ]
-
-    Loading ->
-      text "Loading..."
-
-    Card ->
-      Card.view message.text
-
-    Text ->
-      TextBubble.view message.text
-
-
 
 sendTextConfig : SendText.Config Msg
 sendTextConfig =
@@ -83,10 +48,9 @@ view model =
                               [ h1 [] [ text "Henri Bouvier" ]
                               , h2 [] [ text "Elm Grasshopper" ]
                               ]
-                        , div [ class "messages" ]
-                              [ div [ class "messages-content", id "messages-content-div" ]
-                                    ( List.indexedMap messageItemView model.messages )
-                              ]
+                        , div [ class "messages" ] [
+                              Bubble.view model
+                        ]
                         , SendText.view sendTextConfig sendTextState
                         ]
                   ]

@@ -8,12 +8,11 @@ import Html.Events exposing (..)
 import Views exposing (..)
 import Models exposing (..)
 import Json.Encode as Encode
-import Widgets.Bubble as Bubble
+import Components.ScrollDiv as ScrollDiv
 
 -- https://codepen.io/ramilulu/pen/mrNoXw
 
 ---- UPDATE ----
-
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -33,7 +32,7 @@ update msg model =
       in
           addNewBotMessage Text { newModel | message = message}
     ScrollToBottom ->
-      (model, Bubble.jumpToBottom Bubble.viewportId)
+      (model, ScrollDiv.scrollToBottom scrollDivConfig)
     GotText result ->
       case result of
         Ok fullText ->

@@ -1,77 +1,105 @@
 module Models exposing (..)
 
-import Time
-import Process
-import Task
 import Http
-import Json.Decode as D
-import ListHelpers exposing (..)
 import Regex
 import String exposing (join)
 import API.Giphy exposing (getRandomGif)
 import API.Quote exposing (getRandomQuote)
+import Helpers.Task exposing (delay)
+import Helpers.List exposing (..)
+
+---- MSG ----
 
 type Msg
     = NoOp
-    | KeyDown Int                          -- SendText widget ENTER handler
-    | SendButtonClicked                    -- SendText button click handler
-    | TextInput String                     -- SendText text handler
-    | ScrollToBottom                       -- ScrollDiv scroll to bottom
-    | GotText (Result Http.Error String)   -- HTTP response with TEXT
-    | GotGif (Result Http.Error String)    -- HTTP Response with gif URL
-    | SendMessage String                   -- CHAT time to add a bubble
+    | SendTextOnKeyDown Int                       -- SendText widget ENTER handler
+    | SendTextButtonClicked                       -- SendText widget button click handler
+    | SendTextOnTextChange String                 -- SendText widget text handler
+    | ScrollDivScrollToBottom                     -- ScrollDiv widget scroll to bottom
+    | ShowTextBubble (Result Http.Error String)   -- HTTP response with TEXT
+    | ShowCard (Result Http.Error String)         -- HTTP Response with image URL
+    | SendMessage String                          -- CHAT time to add a bubble
 
 ---- MODEL ----
 
-type WidgetType
-  = Text
-  | Card
-  | Failure
-  | Loading
+type Widget
+  = TextBubble String
+  | CardBubble String
 
-type alias Message = { 
-  widgetType: WidgetType,
-  text: String,
-  bot: Bool }
+type MessageSource
+  = User
+  | Bot
 
-type alias Widget = { 
-  widgetType: WidgetType,
-  bot: Bool,
-  payload: String}
+type alias Message
+  = {
+    source: MessageSource
+  , widget: Widget 
+  }
+
+type alias Model
+  = {
+    messages: List Message
+  , sendTextWidgetValue: String
+  , cannedReplies: List String
+  }
 
 
-type alias Model = { 
-    messages: List Message,
-    message: String,
-    cannedReplies: List String}
+-- type WidgetType
+--   = Text
+--   | Card
+--   | Failure
+--   | Loading
+
+-- type alias Message = { 
+--   widgetType: WidgetType,
+--   text: String,
+--   bot: Bool }
+
+-- type alias Widget = { 
+--   widgetType: WidgetType,
+--   bot: Bool,
+--   payload: String}
+
+
+-- type alias Model
+--   = { 
+--     messages: List Message
+--   , message: String
+--   , cannedReplies: List String
+--   }
+
+-- Globals --
+
 
 init : ( Model, Cmd Msg )
 init =
-  let model = { messages = [], 
-        message = "",
-        cannedReplies = [
-          "Hi there, I'm Henri and you?",
-          "Nice to meet you",
-          "How are you?",
-          "Not too bad, thanks",
-          "What do you do?",
-          "That's awesome",
-          "Elm is the way to go",
-          "I think you're a nice person",
-          "Why do you think that?",
-          "Can you explain?",
-          "Anyway I've gotta go now",
-          "It was a pleasure chat with you",
-          "Time to make a new Elm project",
-          "Bye",
-          ":)"
-        ]}
+  let
+    model
+      = {
+          messages = []
+        , sendTextWidgetValue = ""
+        , cannedReplies = [
+            "Hi there, I'm Henri and you?",
+            "Nice to meet you",
+            "How are you?",
+            "Not too bad, thanks",
+            "What do you do?",
+            "That's awesome",
+            "Elm is the way to go",
+            "I think you're a nice person",
+            "Why do you think that?",
+            "Can you explain?",
+            "Anyway I've gotta go now",
+            "It was a pleasure chat with you",
+            "Time to make a new Elm project",
+            "Bye",
+            ":)"
+        ]
+      }
   in
     initialBotMessage model
 
--- ADD Message
-
-
+-- Initialization
 
 initialBotMessage : Model -> ( Model, Cmd Msg )
 initialBotMessage model =
@@ -82,17 +110,13 @@ initialBotMessage model =
 
      newCannedReplied = removeFromList 0 model.cannedReplies
      newModel = { model | 
-                   messages = model.messages ++ [ 
-                      Message Text model.message False
-                   ],
-                   message = "",
                    cannedReplies = newCannedReplied
                 }
   in
      ( newModel, Cmd.batch [ 
                               delay(100) <| SendMessage "",
                               delay(1500) <| SendMessage msg,
-                              delay(1550) <| ScrollToBottom,
+                              delay(1550) <| ScrollDivScrollToBottom,
                               Cmd.none 
                            ] )
 
@@ -102,7 +126,7 @@ parseMessage model =
     regex = 
       Maybe.withDefault Regex.never <|
         Regex.fromString " "
-    tokens = Regex.split regex model.message
+    tokens = Regex.split regex model.sendTextWidgetValue
   in
     case List.head tokens of
       Just "/quote" ->
@@ -118,16 +142,16 @@ parseMessage model =
 slashGif: String -> Model -> ( Model, Cmd Msg)
 slashGif search model =
      ( model, Cmd.batch [ 
-                              getRandomGif GotGif (Just search),
-                              delay(1000) <| ScrollToBottom,
+                              getRandomGif ShowCard (Just search),
+                              delay(1000) <| ScrollDivScrollToBottom,
                               Cmd.none 
                            ] )
 
 slashQuote: Model -> ( Model, Cmd Msg)
 slashQuote model =
      ( model, Cmd.batch [ 
-                              getRandomQuote GotText,
-                              delay(1000) <| ScrollToBottom,
+                              getRandomQuote ShowTextBubble,
+                              delay(1000) <| ScrollDivScrollToBottom,
                               Cmd.none 
                            ] )
 
@@ -142,37 +166,28 @@ addNewMessage model =
      newCannedReplied = removeFromList 0 model.cannedReplies
      newModel = { model | 
                    messages = model.messages ++ [ 
-                      Message Text model.message False
+                      Message User (TextBubble model.sendTextWidgetValue)
                    ],
-                   message = "",
+                   sendTextWidgetValue = "",
                    cannedReplies = newCannedReplied
                 }
   in
      ( newModel, Cmd.batch [ 
                               delay(100) <| SendMessage "",
                               delay(1500) <| SendMessage msg,
-                              delay(1550) <| ScrollToBottom,
+                              delay(1550) <| ScrollDivScrollToBottom,
                               Cmd.none 
                            ] )
 
-addNewBotMessage : WidgetType -> Model -> ( Model, Cmd Msg )
-addNewBotMessage widgetType model  =
+addNewBotMessage : Message -> Model -> ( Model, Cmd Msg )
+addNewBotMessage message model  =
   let
      newModel = { model | 
                    messages = model.messages ++ [ 
-                      Message widgetType model.message True
+                      message
                    ],
-                   message = ""
+                   sendTextWidgetValue = ""
                 }
 
   in
-     ( newModel, Cmd.batch [ delay(1) <| ScrollToBottom, Cmd.none ] )
-
-
---
-
-delay : Float -> msg -> Cmd msg
-delay time msg =
-  Process.sleep time
-  |> Task.andThen (always <| Task.succeed msg)
-  |> Task.perform identity
+     ( newModel, Cmd.batch [ delay(1) <| ScrollDivScrollToBottom, Cmd.none ] )

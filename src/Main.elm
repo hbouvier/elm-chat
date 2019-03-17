@@ -1,13 +1,8 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
-
 import Views exposing (..)
 import Models exposing (..)
-import Json.Encode as Encode
 import Components.ScrollDiv as ScrollDiv
 
 -- https://codepen.io/ramilulu/pen/mrNoXw
@@ -17,45 +12,64 @@ import Components.ScrollDiv as ScrollDiv
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
-    SendButtonClicked ->
+    -- SendText Widget handles
+    SendTextButtonClicked ->
       parseMessage model
-    TextInput text ->
-      ( { model | message = text }, Cmd.none )
-    KeyDown key ->
+    SendTextOnTextChange text ->
+      ( { model | sendTextWidgetValue = text }, Cmd.none )
+    SendTextOnKeyDown key ->
       if key == 13 then
         parseMessage model
       else
         ( model, Cmd.none )
-    SendMessage message ->
-      let
-          newModel = { model | messages = List.filter (\x -> x.text /= "") model.messages }
-      in
-          addNewBotMessage Text { newModel | message = message}
-    ScrollToBottom ->
+
+    -- ScrollDiv widget handler
+    ScrollDivScrollToBottom ->
       (model, ScrollDiv.scrollToBottom scrollDivConfig)
-    GotText result ->
+
+    -- Response from `quote` API
+    ShowTextBubble result ->
       case result of
         Ok fullText ->
-           addNewBotMessage Text { model | message = fullText}
+           addNewBotMessage (Message Bot (TextBubble fullText)) model
         Err _ ->
           ( model, Cmd.none )
-    GotGif result ->
+
+    -- Response from `giphy` API
+    ShowCard result ->
       case result of
         Ok url ->
-           addNewBotMessage Card { model | message = url }
+           addNewBotMessage (Message Bot (CardBubble url)) model
         Err _ ->
           ( model, Cmd.none)
+
+    -- User sending message to the bot
+    SendMessage message ->
+      let
+          newModel
+            = { model | 
+                messages
+                  = List.filter (\x -> 
+                    case x.widget of
+                      TextBubble "" ->
+                        False
+                      _  -> True
+                  ) model.messages
+              }
+      in
+          addNewBotMessage (Message Bot (TextBubble message)) newModel
+
+    -- Nothing to do
     NoOp ->
       ( model, Cmd.none )
 
 ---- PROGRAM ----
 
-
 main : Program () Model Msg -- Maybe Model
 main =
-    Browser.element
-        { view = view
-        , init = \_ -> init
-        , update = update
-        , subscriptions = always Sub.none
-        }
+  Browser.element
+    { view = view
+    , init = \_ -> init
+    , update = update
+    , subscriptions = always Sub.none
+    }

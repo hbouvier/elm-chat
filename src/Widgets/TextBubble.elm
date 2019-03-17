@@ -1,7 +1,6 @@
 module Widgets.TextBubble exposing (view)
 
 import Html exposing (..)
-import Html.Attributes exposing (..)
 import String exposing (slice, length)
 
 view : String -> Html msg

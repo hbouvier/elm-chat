@@ -1,4 +1,4 @@
-module ListHelpers exposing (..)
+module Helpers.List exposing (..)
 
 removeFromList : Int -> List a -> List a
 removeFromList i xs =

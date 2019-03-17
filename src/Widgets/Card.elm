@@ -7,5 +7,5 @@ import Html.Attributes exposing (..)
 view : String -> Html msg
 view url =
   div []
-    [ img [ src url, width 120, height 120 ] []
+    [ img [ src url, width 260, height 180 ] []
   ]

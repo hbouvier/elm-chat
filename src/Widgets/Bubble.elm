@@ -9,9 +9,13 @@ import Models exposing (..)
 
 view : Int -> Message -> Html Msg
 view index message =
-  if message.bot then
+  if message.source == Bot then
     let
-      c = if message.text == "" then "message loading new" else "message"
+      c = case message.widget of
+        TextBubble "" ->
+          "message loading new"
+        _ ->
+          "message"
     in
       div [ class c ]
           [ figure [class "avatar"]
@@ -19,22 +23,22 @@ view index message =
                    ]
         , span [] [ viewWidget message ]
           ]
-  else
+  else -- User
     div [ class "message message-personal new" ] [ viewWidget message ]
 
 viewWidget : Message -> Html Msg
 viewWidget message =
-  case message.widgetType of
-    Failure ->
-      div []
-        [ text "I could not load a random cat for some reason. "
-        ]
+  case message.widget of
+    -- Failure ->
+    --   div []
+    --     [ text "I could not load a random cat for some reason. "
+    --     ]
 
-    Loading ->
-      text "Loading..."
+    -- Loading ->
+    --   text "Loading..."
 
-    Card ->
-      Card.view message.text
+    CardBubble url ->
+      Card.view url
 
-    Text ->
-      TextBubble.view message.text
+    TextBubble text ->
+      TextBubble.view text

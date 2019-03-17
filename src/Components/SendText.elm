@@ -3,7 +3,7 @@ module Components.SendText exposing (State, Config, view)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import EventHelpers exposing (..)
+import Helpers.Event exposing (..)
 
 
 type alias State =
@@ -13,7 +13,7 @@ type alias State =
 type alias Config msg =
   { sendMsg: msg
   , keyDown: Int -> msg
-  , textInput: String -> msg
+  , onTextChange: String -> msg
   }
 
 
@@ -24,7 +24,7 @@ view config state =
         class "message-input"
       , placeholder "Type message..."
       , onKeyDown config.keyDown
-      , onInput config.textInput
+      , onInput config.onTextChange
       , value state.text
       ] []
     , button [ class "message-submit", onClick config.sendMsg ] [ text "Send" ]

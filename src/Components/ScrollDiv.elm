@@ -2,14 +2,11 @@ module Components.ScrollDiv exposing (view, Config, scrollToBottom)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Widgets.Card as Card
-import Widgets.TextBubble as TextBubble
+import Browser.Dom exposing (getViewportOf, setViewportOf)
+import Task
 
 import Models exposing (..)
 
-
-import Browser.Dom exposing (getViewportOf, setViewportOf)
-import Task
 
 type alias Config =
   { id: String

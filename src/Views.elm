@@ -4,7 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 
-import EventHelpers exposing (..)
+import Helpers.Event exposing (..)
 import Models exposing (..)
 
 import Components.SendText as SendText
@@ -18,9 +18,9 @@ scrollDivConfig =
 
 sendTextConfig : SendText.Config Msg
 sendTextConfig =
-  { sendMsg = SendButtonClicked
-  , keyDown = KeyDown
-  , textInput = TextInput
+  { sendMsg = SendTextButtonClicked
+  , keyDown = SendTextOnKeyDown
+  , onTextChange = SendTextOnTextChange
   }
 
 ---- VIEW ----
@@ -29,7 +29,7 @@ view : Model -> Html Msg
 view model =
   let
     sendTextState =
-      { text = model.message
+      { text = model.sendTextWidgetValue
       }
   in
     div [] 

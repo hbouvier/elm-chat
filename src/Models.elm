@@ -4,11 +4,12 @@ import Time
 import Process
 import Task
 import Http
-import Json.Decode as D exposing (Decoder, field, string, list, map3)
--- import Json.Decode exposing (Decoder, field, string, list, map3)
+import Json.Decode as D
 import ListHelpers exposing (..)
 import Regex
 import String exposing (join)
+import API.Giphy exposing (getRandomGif)
+import API.Quote exposing (getRandomQuote)
 
 type Msg
     = NoOp
@@ -18,7 +19,6 @@ type Msg
     | ScrollToBottom                       -- ScrollDiv scroll to bottom
     | GotText (Result Http.Error String)   -- HTTP response with TEXT
     | GotGif (Result Http.Error String)    -- HTTP Response with gif URL
-    | GotListOfQuotes (Result Http.Error QuoteAPIResponse)
     | SendMessage String                   -- CHAT time to add a bubble
 
 ---- MODEL ----
@@ -118,7 +118,7 @@ parseMessage model =
 slashGif: String -> Model -> ( Model, Cmd Msg)
 slashGif search model =
      ( model, Cmd.batch [ 
-                              getRandomCatGif search,
+                              getRandomGif GotGif (Just search),
                               delay(1000) <| ScrollToBottom,
                               Cmd.none 
                            ] )
@@ -126,7 +126,7 @@ slashGif search model =
 slashQuote: Model -> ( Model, Cmd Msg)
 slashQuote model =
      ( model, Cmd.batch [ 
-                              getRandomQuote,
+                              getRandomQuote GotText,
                               delay(1000) <| ScrollToBottom,
                               Cmd.none 
                            ] )
@@ -168,82 +168,6 @@ addNewBotMessage widgetType model  =
   in
      ( newModel, Cmd.batch [ delay(1) <| ScrollToBottom, Cmd.none ] )
 
-getRandomQuote: Cmd Msg
-getRandomQuote =
-  Http.get 
-    {
-      url = "https://jsonp.afeld.me/?url=http://quotes.stormconsultancy.co.uk/random.json"
-    , expect = Http.expectJson GotText simpleQuoteDecoder
-    }
-
-getRandomQuote2: Cmd Msg
-getRandomQuote2 =
-  Http.get 
-    {
-      url = "https://theysaidso.com/api/qod"
-    , expect = Http.expectJson GotListOfQuotes quoteAPIResponseDecoder
-    }
-
-getOpinion: Cmd Msg
-getOpinion =
-  Http.get 
-    {
-      url = "https://elm-lang.org/assets/public-opinion.txt"
-    , expect = Http.expectString GotText
-    }
-
-
-getRandomCatGif : String -> Cmd Msg
-getRandomCatGif search =
-  Http.get
-    { url = "https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=" ++ search
-    , expect = Http.expectJson GotGif gifDecoder
-    }
-
-type alias Quote =
-  { quote: String
-  , author: String
-  }
-
-type alias Contents =
-  { quotes: List Quote
-  }
-
-type alias QuoteAPIResponse =
-    { contents : Contents
-    }
-
-quoteDecoder: D.Decoder Quote
-quoteDecoder =
-  D.map2 
-    Quote
-    (D.field "quote" D.string)
-    (D.field "author" D.string)
-
-quotesDecoder: D.Decoder (List Quote)
-quotesDecoder =
-  D.list quoteDecoder
-
-contentsDecoder: D.Decoder Contents
-contentsDecoder =
-  D.map
-    Contents
-    (D.field "quotes" quotesDecoder)
-
-quoteAPIResponseDecoder: D.Decoder QuoteAPIResponse
-quoteAPIResponseDecoder =
-  D.map
-  QuoteAPIResponse
-  (D.field "contents" contentsDecoder)
-
-
-gifDecoder : Decoder String
-gifDecoder =
-  field "data" (field "image_url" string)
-
-simpleQuoteDecoder : Decoder String
-simpleQuoteDecoder =
-  field "quote" string
 
 --
 

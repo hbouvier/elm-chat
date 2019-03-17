@@ -4,7 +4,8 @@ import Time
 import Process
 import Task
 import Http
-import Json.Decode exposing (Decoder, field, string)
+import Json.Decode as D exposing (Decoder, field, string, list, map3)
+-- import Json.Decode exposing (Decoder, field, string, list, map3)
 import ListHelpers exposing (..)
 import Regex
 import String exposing (join)
@@ -17,6 +18,7 @@ type Msg
     | ScrollToBottom                       -- ScrollDiv scroll to bottom
     | GotText (Result Http.Error String)   -- HTTP response with TEXT
     | GotGif (Result Http.Error String)    -- HTTP Response with gif URL
+    | GotListOfQuotes (Result Http.Error QuoteAPIResponse)
     | SendMessage String                   -- CHAT time to add a bubble
 
 ---- MODEL ----
@@ -88,11 +90,6 @@ initialBotMessage model =
                 }
   in
      ( newModel, Cmd.batch [ 
-                              Http.get { 
-                                url = "https://elm-lang.org/assets/public-opinion.txt"
-                              , expect = Http.expectString GotText
-                              },
-                              getRandomCatGif "cat",
                               delay(100) <| SendMessage "",
                               delay(1500) <| SendMessage msg,
                               delay(1550) <| ScrollToBottom,
@@ -108,6 +105,8 @@ parseMessage model =
     tokens = Regex.split regex model.message
   in
     case List.head tokens of
+      Just "/quote" ->
+        slashQuote model
       Just "/gif" ->
         slashGif (join "+" (removeFromList 0 tokens)) model
       Just _ ->
@@ -124,6 +123,13 @@ slashGif search model =
                               Cmd.none 
                            ] )
 
+slashQuote: Model -> ( Model, Cmd Msg)
+slashQuote model =
+     ( model, Cmd.batch [ 
+                              getRandomQuote,
+                              delay(1000) <| ScrollToBottom,
+                              Cmd.none 
+                           ] )
 
 
 addNewMessage : Model -> ( Model, Cmd Msg )
@@ -162,7 +168,29 @@ addNewBotMessage widgetType model  =
   in
      ( newModel, Cmd.batch [ delay(1) <| ScrollToBottom, Cmd.none ] )
 
+getRandomQuote: Cmd Msg
+getRandomQuote =
+  Http.get 
+    {
+      url = "https://jsonp.afeld.me/?url=http://quotes.stormconsultancy.co.uk/random.json"
+    , expect = Http.expectJson GotText simpleQuoteDecoder
+    }
 
+getRandomQuote2: Cmd Msg
+getRandomQuote2 =
+  Http.get 
+    {
+      url = "https://theysaidso.com/api/qod"
+    , expect = Http.expectJson GotListOfQuotes quoteAPIResponseDecoder
+    }
+
+getOpinion: Cmd Msg
+getOpinion =
+  Http.get 
+    {
+      url = "https://elm-lang.org/assets/public-opinion.txt"
+    , expect = Http.expectString GotText
+    }
 
 
 getRandomCatGif : String -> Cmd Msg
@@ -172,12 +200,50 @@ getRandomCatGif search =
     , expect = Http.expectJson GotGif gifDecoder
     }
 
+type alias Quote =
+  { quote: String
+  , author: String
+  }
+
+type alias Contents =
+  { quotes: List Quote
+  }
+
+type alias QuoteAPIResponse =
+    { contents : Contents
+    }
+
+quoteDecoder: D.Decoder Quote
+quoteDecoder =
+  D.map2 
+    Quote
+    (D.field "quote" D.string)
+    (D.field "author" D.string)
+
+quotesDecoder: D.Decoder (List Quote)
+quotesDecoder =
+  D.list quoteDecoder
+
+contentsDecoder: D.Decoder Contents
+contentsDecoder =
+  D.map
+    Contents
+    (D.field "quotes" quotesDecoder)
+
+quoteAPIResponseDecoder: D.Decoder QuoteAPIResponse
+quoteAPIResponseDecoder =
+  D.map
+  QuoteAPIResponse
+  (D.field "contents" contentsDecoder)
+
 
 gifDecoder : Decoder String
 gifDecoder =
   field "data" (field "image_url" string)
 
-
+simpleQuoteDecoder : Decoder String
+simpleQuoteDecoder =
+  field "quote" string
 
 --
 

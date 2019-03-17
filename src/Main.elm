@@ -39,6 +39,20 @@ update msg model =
            addNewBotMessage Text { model | message = fullText}
         Err _ ->
           ( model, Cmd.none )
+    GotListOfQuotes result ->
+      case result of
+        Ok quoteAPIResponse ->
+          let
+            quote = 
+              case List.head quoteAPIResponse.contents.quotes of
+                Just aQuote ->
+                  aQuote.quote
+                Nothing ->
+                  "meh!"
+          in          
+            addNewBotMessage Text { model | message = quote}
+        Err _ ->
+          ( model, Cmd.none )
     GotGif result ->
       case result of
         Ok url ->

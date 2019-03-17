@@ -43,34 +43,6 @@ type alias Model
   , cannedReplies: List String
   }
 
-
--- type WidgetType
---   = Text
---   | Card
---   | Failure
---   | Loading
-
--- type alias Message = { 
---   widgetType: WidgetType,
---   text: String,
---   bot: Bool }
-
--- type alias Widget = { 
---   widgetType: WidgetType,
---   bot: Bool,
---   payload: String}
-
-
--- type alias Model
---   = { 
---     messages: List Message
---   , message: String
---   , cannedReplies: List String
---   }
-
--- Globals --
-
-
 init : ( Model, Cmd Msg )
 init =
   let

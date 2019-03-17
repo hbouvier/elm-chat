@@ -4,6 +4,8 @@ import Browser
 import Views exposing (..)
 import Models exposing (..)
 import Components.ScrollDiv as ScrollDiv
+import Helpers.Task exposing (delay)
+import FakeBackend exposing (..)
 
 -- https://codepen.io/ramilulu/pen/mrNoXw
 
@@ -31,7 +33,7 @@ update msg model =
     ShowTextBubble result ->
       case result of
         Ok fullText ->
-           addNewBotMessage (Message Bot (TextBubble fullText)) model
+           addNewBotMessage (Message Bot False (TextBubble fullText)) model
         Err _ ->
           ( model, Cmd.none )
 
@@ -39,26 +41,30 @@ update msg model =
     ShowCard result ->
       case result of
         Ok url ->
-           addNewBotMessage (Message Bot (CardBubble url)) model
+          addNewBotMessage (Message Bot False (CardBubble url)) model
         Err _ ->
           ( model, Cmd.none)
 
     -- User sending message to the bot
     SendMessage message ->
-      let
-          newModel
-            = { model | 
-                messages
-                  = List.filter (\x -> 
-                    case x.widget of
-                      TextBubble "" ->
-                        False
-                      _  -> True
-                  ) model.messages
-              }
-      in
-          addNewBotMessage (Message Bot (TextBubble message)) newModel
+      addNewBotMessage (Message Bot True (TextBubble message)) model
 
+    -- Remove the loading bubble
+    Loaded ->
+      let
+        newModel 
+          = { model | 
+              messages
+                = List.map (\x -> 
+                  case x.loading of
+                    True ->
+                      { x | loading = False }
+                    False  ->
+                      x
+                ) model.messages
+            }
+      in
+        ( newModel, Cmd.none )
     -- Nothing to do
     NoOp ->
       ( model, Cmd.none )

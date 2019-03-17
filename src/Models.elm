@@ -1,10 +1,6 @@
 module Models exposing (..)
 
 import Http
-import Regex
-import String exposing (join)
-import API.Giphy exposing (getRandomGif)
-import API.Quote exposing (getRandomQuote)
 import Helpers.Task exposing (delay)
 import Helpers.List exposing (..)
 
@@ -19,6 +15,7 @@ type Msg
     | ShowTextBubble (Result Http.Error String)   -- HTTP response with TEXT
     | ShowCard (Result Http.Error String)         -- HTTP Response with image URL
     | SendMessage String                          -- CHAT time to add a bubble
+    | Loaded
 
 ---- MODEL ----
 
@@ -33,6 +30,7 @@ type MessageSource
 type alias Message
   = {
     source: MessageSource
+  , loading: Bool
   , widget: Widget 
   }
 
@@ -50,116 +48,42 @@ init =
       = {
           messages = []
         , sendTextWidgetValue = ""
-        , cannedReplies = [
-            "Hi there, I'm Henri and you?",
-            "Nice to meet you",
-            "How are you?",
-            "Not too bad, thanks",
-            "What do you do?",
-            "That's awesome",
-            "Elm is the way to go",
-            "I think you're a nice person",
-            "Why do you think that?",
-            "Can you explain?",
-            "Anyway I've gotta go now",
-            "It was a pleasure chat with you",
-            "Time to make a new Elm project",
-            "Bye",
-            ":)"
-        ]
+        , cannedReplies = getCannedResponses
       }
   in
     initialBotMessage model
 
 -- Initialization
 
+getCannedResponses: List String
+getCannedResponses = 
+  [
+    "Hi there, I'm Henri and you?",
+    "Nice to meet you",
+    "How are you?",
+    "Not too bad, thanks",
+    "What do you do?",
+    "That's awesome",
+    "Elm is the way to go",
+    "I think you're a nice person",
+    "Why do you think that?",
+    "Can you explain?",
+    "Anyway I've gotta go now",
+    "It was a pleasure chat with you",
+    "Time to make a new Elm project",
+    "Bye",
+    ":)"
+  ]
+
 initialBotMessage : Model -> ( Model, Cmd Msg )
 initialBotMessage model =
   let
-     msg = case getItemFromList 1 model.cannedReplies of
-      Just item -> item
-      Nothing -> ":-)"
-
-     newCannedReplied = removeFromList 0 model.cannedReplies
-     newModel = { model | 
-                   cannedReplies = newCannedReplied
-                }
+    (reply, cannedReplies) = popItemFromList model.cannedReplies ":-)"
+    newModel = { model | cannedReplies = cannedReplies }
   in
      ( newModel, Cmd.batch [ 
-                              delay(100) <| SendMessage "",
-                              delay(1500) <| SendMessage msg,
-                              delay(1550) <| ScrollDivScrollToBottom,
+                              delay(0) <| SendMessage reply,
+                              delay(1000) <| Loaded,
+                              delay(1050) <| ScrollDivScrollToBottom,
                               Cmd.none 
                            ] )
-
-parseMessage : Model -> ( Model, Cmd Msg)
-parseMessage model =
-  let
-    regex = 
-      Maybe.withDefault Regex.never <|
-        Regex.fromString " "
-    tokens = Regex.split regex model.sendTextWidgetValue
-  in
-    case List.head tokens of
-      Just "/quote" ->
-        slashQuote model
-      Just "/gif" ->
-        slashGif (join "+" (removeFromList 0 tokens)) model
-      Just _ ->
-        addNewMessage model
-      Nothing ->
-        addNewMessage model
-
-
-slashGif: String -> Model -> ( Model, Cmd Msg)
-slashGif search model =
-     ( model, Cmd.batch [ 
-                              getRandomGif ShowCard (Just search),
-                              delay(1000) <| ScrollDivScrollToBottom,
-                              Cmd.none 
-                           ] )
-
-slashQuote: Model -> ( Model, Cmd Msg)
-slashQuote model =
-     ( model, Cmd.batch [ 
-                              getRandomQuote ShowTextBubble,
-                              delay(1000) <| ScrollDivScrollToBottom,
-                              Cmd.none 
-                           ] )
-
-
-addNewMessage : Model -> ( Model, Cmd Msg )
-addNewMessage model =
-  let
-     msg = case getItemFromList 1 model.cannedReplies of
-      Just item -> item
-      Nothing -> ":-)"
-
-     newCannedReplied = removeFromList 0 model.cannedReplies
-     newModel = { model | 
-                   messages = model.messages ++ [ 
-                      Message User (TextBubble model.sendTextWidgetValue)
-                   ],
-                   sendTextWidgetValue = "",
-                   cannedReplies = newCannedReplied
-                }
-  in
-     ( newModel, Cmd.batch [ 
-                              delay(100) <| SendMessage "",
-                              delay(1500) <| SendMessage msg,
-                              delay(1550) <| ScrollDivScrollToBottom,
-                              Cmd.none 
-                           ] )
-
-addNewBotMessage : Message -> Model -> ( Model, Cmd Msg )
-addNewBotMessage message model  =
-  let
-     newModel = { model | 
-                   messages = model.messages ++ [ 
-                      message
-                   ],
-                   sendTextWidgetValue = ""
-                }
-
-  in
-     ( newModel, Cmd.batch [ delay(1) <| ScrollDivScrollToBottom, Cmd.none ] )

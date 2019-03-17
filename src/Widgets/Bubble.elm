@@ -7,17 +7,21 @@ import Widgets.TextBubble as TextBubble
 
 import Models exposing (..)
 
-view : Int -> Message -> Html Msg
+
+type alias State = Bool
+
+view : Int -> Message -> Html msg
 view index message =
   if message.source == Bot then
     let
-      c = case message.widget of
-        TextBubble "" ->
-          "message loading new"
-        _ ->
-          "message"
+      c = if message.loading then "message loading new" else "message"
+      -- c = case message.widget of
+      --   TextBubble "" ->
+      --     "message loading new"
+      --   _ ->
+      --     "message"
     in
-      div [ class c ]
+      div [ class c, id (String.fromInt index) ]
           [ figure [class "avatar"]
                    [ img [ src "https://www.gravatar.com/avatar/d63acca1aeea094dd10565935d93960b" ] []
                    ]
@@ -26,16 +30,13 @@ view index message =
   else -- User
     div [ class "message message-personal new" ] [ viewWidget message ]
 
-viewWidget : Message -> Html Msg
+viewWidget : Message -> Html msg
 viewWidget message =
   case message.widget of
     -- Failure ->
     --   div []
     --     [ text "I could not load a random cat for some reason. "
     --     ]
-
-    -- Loading ->
-    --   text "Loading..."
 
     CardBubble url ->
       Card.view url

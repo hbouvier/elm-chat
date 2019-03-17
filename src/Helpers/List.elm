@@ -13,3 +13,13 @@ getItemFromList index xs =
         |> List.head
    else 
       Nothing
+
+popItemFromList: List a -> a -> (a, List a)
+popItemFromList xs defaultValue =
+  let
+    item = case getItemFromList 1 xs of
+      Just value -> value
+      Nothing -> defaultValue
+    tail = removeFromList 0 xs
+  in
+    (item, tail)

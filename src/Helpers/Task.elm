@@ -1,9 +1,11 @@
 module Helpers.Task exposing (delay)
-import Task
+
 import Process
+import Task
+
 
 delay : Float -> msg -> Cmd msg
 delay time msg =
-  Process.sleep time
-  |> Task.andThen (always <| Task.succeed msg)
-  |> Task.perform identity
+    Process.sleep time
+        |> Task.andThen (always <| Task.succeed msg)
+        |> Task.perform identity

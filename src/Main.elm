@@ -1,73 +1,97 @@
-module Main exposing (..)
+module Main exposing (main, update)
 
 import Browser
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
-
-import Views exposing (..)
+import Components.ScrollDiv as ScrollDiv
+import FakeBackend exposing (..)
+import Helpers.Task exposing (delay)
 import Models exposing (..)
-import Json.Encode as Encode
+import Views exposing (..)
 
-import Browser.Dom exposing (getViewportOf, setViewportOf)
-import Task
+
 
 -- https://codepen.io/ramilulu/pen/mrNoXw
-
 ---- UPDATE ----
 
 
-viewportId =
-    "messages-content-div"
-
-
-jumpToBottom : String -> Cmd Msg
-jumpToBottom id =
-  getViewportOf id
-    |> Task.andThen (\info -> setViewportOf id 0 info.scene.height)
-    |> Task.attempt (\_ -> NoOp)
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-  case msg of
-    SendButtonClicked ->
-      addNewMessage model
-    TextInput text ->
-      ( { model | message = text }, Cmd.none )
-    KeyDown key ->
-      if key == 13 then
-        addNewMessage model
-      else
-        ( model, Cmd.none )
-    SendMessage message ->
-      let
-          newModel = { model | messages = List.filter (\x -> x.text /= "") model.messages }
-      in
-          addNewBotMessage Text { newModel | message = message}
-    ScrollToBottom ->
-      (model, jumpToBottom viewportId)
-    GotText result ->
-      case result of
-        Ok fullText ->
-           addNewBotMessage Text { model | message = fullText}
-        Err _ ->
-          ( model, Cmd.none )
-    GotGif result ->
-      case result of
-        Ok url ->
-           addNewBotMessage Card { model | message = url }
-        Err _ ->
-          ( model, Cmd.none)
-    NoOp ->
-      ( model, Cmd.none )
+    case msg of
+        -- SendText Widget handles
+        SendTextButtonClicked ->
+            parseMessage model
 
+        SendTextOnTextChange text ->
+            ( { model | sendTextWidgetValue = text }, Cmd.none )
+
+        SendTextOnKeyDown key ->
+            if key == 13 then
+                parseMessage model
+
+            else
+                ( model, Cmd.none )
+
+        -- ScrollDiv widget handler
+        ScrollDivScrollToBottom ->
+            ( model, ScrollDiv.scrollToBottom scrollDivConfig )
+
+        -- Response from `quote` API
+        ShowTextBubble result ->
+            case result of
+                Ok fullText ->
+                    addNewBotMessage (Message Bot False (TextBubble fullText)) model
+
+                Err _ ->
+                    ( model, Cmd.none )
+
+        -- Response from `giphy` API
+        ShowCard result ->
+            case result of
+                Ok url ->
+                    addNewBotMessage (Message Bot False (CardBubble url)) model
+
+                Err _ ->
+                    ( model, Cmd.none )
+
+        -- User sending message to the bot
+        SendMessage message ->
+            addNewBotMessage (Message Bot True (TextBubble message)) model
+
+        -- Remove the loading bubble
+        Loaded ->
+            let
+                newModel =
+                    { model
+                        | messages =
+                            List.map
+                                (\x ->
+                                    case x.loading of
+                                        True ->
+                                            { x | loading = False }
+
+                                        False ->
+                                            x
+                                )
+                                model.messages
+                    }
+            in
+            ( newModel, Cmd.none )
+
+        -- Nothing to do
+        NoOp ->
+            ( model, Cmd.none )
 
 
 
 ---- PROGRAM ----
 
 
-main : Program () Model Msg -- Maybe Model
+main : Program () Model Msg
+
+
+
+-- Maybe Model
+
+
 main =
     Browser.element
         { view = view

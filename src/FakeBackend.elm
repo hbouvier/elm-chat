@@ -2,6 +2,7 @@ module FakeBackend exposing (addNewBotMessage, addNewMessage, parseMessage, slas
 
 import API.Giphy exposing (getRandomGif)
 import API.Quote exposing (getRandomQuote)
+import API.Watson exposing (getWatsonResponse)
 import Helpers.List exposing (..)
 import Helpers.Task exposing (delay)
 import Http
@@ -26,6 +27,9 @@ parseMessage model =
 
         Just "/gif" ->
             slashGif (join "+" (removeFromList 0 tokens)) model
+
+        Just "/watson" ->
+            slashWatson (join " " (removeFromList 0 tokens)) model
 
         Just _ ->
             addNewMessage model
@@ -55,6 +59,15 @@ slashQuote model =
         ]
     )
 
+slashWatson : String -> Model -> ( Model, Cmd Msg )
+slashWatson question model =
+    ( model
+    , Cmd.batch
+        [ getWatsonResponse ShowTextBubble(Just question)
+        , delay 1000 <| ScrollDivScrollToBottom
+        , Cmd.none
+        ]
+    )
 
 addNewMessage : Model -> ( Model, Cmd Msg )
 addNewMessage model =

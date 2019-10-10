@@ -895,7 +895,7 @@ Bounce
   background: rgba(255, 255, 255, 0.9);
   position: fixed;
   right: 20px;
-  bottom: 80px; // bottom of the window
+  bottom: 80px; /* bottom of the window */
   margin: auto;
   z-index: 10;
   box-shadow: 2px 10px 40px rgba(22, 20, 19, 0.4);
